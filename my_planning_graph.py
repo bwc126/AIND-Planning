@@ -201,7 +201,7 @@ def mutexify(node1: PgNode, node2: PgNode):
 class PlanningGraph():
     '''
     A planning graph as described in chapter 10 of the AIMA text. The planning
-    graph can be used to reason about 
+    graph can be used to reason about
     '''
 
     def __init__(self, problem: Problem, state: str, serial_planning=True):
@@ -386,12 +386,31 @@ class PlanningGraph():
         :param node_a2: PgNode_a
         :return: bool
         '''
-        # TODO test for Inconsistent Effects between nodes
+        # test for Inconsistent Effects between nodes
+        # Make a list of actions' effects
+        effects = [node_a1.action.effect, node_a2.action.effect]
+        # Get all the negative effects of the actions
+
+        negs = [node_a1.action.effect_rem, node_a2.action.effect_rem]
+        negatives = []
+        for neg in negs:
+            negatives = negatives + neg
+
+        # Get all the positive effects of the actions
+        poses = [node_a1.action.effect_pos, node_a2.action.effect_pos]
+        positives = []
+        for pos in poses:
+            positives = positives + pos
+        # If the list of positive effects contains any of the negative effects, we have an inconcsistency, return true
+
+        for neg in negatives:
+            if neg in positive:
+                return True
         return False
 
     def interference_mutex(self, node_a1: PgNode_a, node_a2: PgNode_a) -> bool:
         '''
-        Test a pair of actions for mutual exclusion, returning True if the 
+        Test a pair of actions for mutual exclusion, returning True if the
         effect of one action is the negation of a precondition of the other.
 
         HINT: The Action instance associated with an action node is accessible
@@ -403,7 +422,21 @@ class PlanningGraph():
         :param node_a2: PgNode_a
         :return: bool
         '''
-        # TODO test for Interference between nodes
+        # test for Interference between nodes
+        preconditions_1 = node_a1.action.precond_pos + node_a1.action.precond_neg
+        preconditions_2 = node_a2.action.precond_pos + node_a2.action.precond_neg
+
+        effects_1 = node_a1.action.effect_add + node_a1.action.effect_rem
+        effects_2 = node_a2.action.effect_add + node_a2.action.effect_rem
+
+        for effect in effects_1:
+            if effect in preconditions_2:
+                return True
+
+        for effect in effects_2:
+            if effect in preconditions_1:
+                return True
+
         return False
 
     def competing_needs_mutex(self, node_a1: PgNode_a, node_a2: PgNode_a) -> bool:
@@ -417,7 +450,14 @@ class PlanningGraph():
         :return: bool
         '''
 
-        # TODO test for Competing Needs between nodes
+        preconditions_1 = node_a1.action.precond_pos + node_a1.action.precond_neg
+        preconditions_2 = node_a2.action.precond_pos + node_a2.action.precond_neg
+
+        for precondition in preconditions_1:
+            if precondition in preconditions_2:
+                return True
+
+        # test for Competing Needs between nodes
         return False
 
     def update_s_mutex(self, nodeset: set):
@@ -452,7 +492,11 @@ class PlanningGraph():
         :param node_s2: PgNode_s
         :return: bool
         '''
-        # TODO test for negation between nodes
+        # test for negation between nodes
+        if (node_s1.symbol == node_s2.symbol) and (node_s1.is_pos != node_s2.is_pos):
+            return True
+
+
         return False
 
     def inconsistent_support_mutex(self, node_s1: PgNode_s, node_s2: PgNode_s):
@@ -471,7 +515,14 @@ class PlanningGraph():
         :param node_s2: PgNode_s
         :return: bool
         '''
-        # TODO test for Inconsistent Support between nodes
+        # test for Inconsistent Support between nodes
+        parents_1 = node_s1.parents
+        parents_2 = node_s2.parents
+
+        for node_1 in parents_1:
+            for node_2 in parents_2:
+                if node_1.is_mutex(node_2):
+                    return True
         return False
 
     def h_levelsum(self) -> int:
@@ -480,6 +531,10 @@ class PlanningGraph():
         :return: int
         '''
         level_sum = 0
-        # TODO implement
+        # implement
         # for each goal in the problem, determine the level cost, then add them together
+        for goal in self.problem.goal:
+            graph = PlanningGraph(Problem(problem.initial_state,goal))
+            graph.create_graph()
+            level_sum = level_sum + len(graph.s_levels) + len(graph.a_levels)
         return level_sum
